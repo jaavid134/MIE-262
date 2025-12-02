@@ -1,0 +1,42 @@
+reset;
+model warp.mod;
+data computerwarp.dat;
+option solver gurobi;
+solve;
+param x_round{p in P};
+let {p in P} x_round[p] := round(x[p]);
+printf "PROFIT\n%f\n\n", Profit > WARP_output.out;
+printf "X_VALUES\n" >> WARP_output.out;
+for {p in P}
+    printf "%s %f\n", p, x_round[p] >> WARP_output.out;
+printf "\n" >> WARP_output.out;
+printf "RAW_MATERIAL_TABLE\n" >> WARP_output.out;
+printf "RM  Consumed  Available  Slack  Dual\n" >> WARP_output.out;
+for {r in R}
+    printf "%s %f %f %f %f\n",
+        r,
+        sum{p in P} bom[p,r] * x_round[p],
+        rm_avail[r],
+        rm_avail[r] - sum{p in P} bom[p,r] * x_round[p],
+        RM_Availability[r].dual
+        >> WARP_output.out;
+printf "\n" >> WARP_output.out;
+printf "MACHINE_CONSTRAINTS\n" >> WARP_output.out;
+printf "Machine  Slack  Dual\n" >> WARP_output.out;
+for {m in M}
+    printf "%s %f %f\n",
+        m,
+        machine_capacity_min[m] - sum{p in P} proc_time[p,m] * x_round[p],
+        Machine_Capacity[m].dual
+        >> WARP_output.out;
+printf "\n" >> WARP_output.out;
+printf "RM_BUDGET\n" >> WARP_output.out;
+printf "%f %f\n\n",
+    rm_budget - sum{p in P, r in R} rm_cost[r] * bom[p,r] * x_round[p],
+    RM_Budget.dual
+    >> WARP_output.out;
+printf "WAREHOUSE_CAP\n" >> WARP_output.out;
+printf "%f %f\n",
+    sum{w in W} warehouse_cap[w] * y[w] - sum{p in P} x_round[p],
+    Warehouse_Cap.dual
+    >> WARP_output.out;
