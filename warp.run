@@ -1,0 +1,49 @@
+reset;
+
+model warp.mod;
+data computerwarp.dat;
+
+option solver gurobi;
+
+solve;
+
+printf "PROFIT\n%f\n\n", Profit > WARP_output.out;
+
+printf "X_VALUES\n" >> WARP_output.out;
+for {p in P}
+    printf "%s %f\n", p, x[p] >> WARP_output.out;
+printf "\n" >> WARP_output.out;
+
+printf "RAW_MATERIAL_TABLE\n" >> WARP_output.out;
+printf "RM  Consumed  Available  Slack  Dual\n" >> WARP_output.out;
+for {r in R}
+    printf "%s %f %f %f %f\n",
+        r,
+        sum{p in P} bom[p,r] * x[p],
+        rm_avail[r],
+        RM_Availability[r].slack,
+        RM_Availability[r].dual
+        >> WARP_output.out;
+printf "\n" >> WARP_output.out;
+
+printf "MACHINE_CONSTRAINTS\n" >> WARP_output.out;
+printf "Machine  Slack  Dual\n" >> WARP_output.out;
+for {m in M}
+    printf "%s %f %f\n",
+        m,
+        Machine_Capacity[m].slack,
+        Machine_Capacity[m].dual
+        >> WARP_output.out;
+printf "\n" >> WARP_output.out;
+
+printf "RM_BUDGET\n" >> WARP_output.out;
+printf "%f %f\n\n",
+    RM_Budget.slack,
+    RM_Budget.dual
+    >> WARP_output.out;
+
+printf "WAREHOUSE_CAP\n" >> WARP_output.out;
+printf "%f %f\n",
+    Warehouse_Cap.slack,
+    Warehouse_Cap.dual
+    >> WARP_output.out;
