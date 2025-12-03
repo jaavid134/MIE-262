@@ -1,0 +1,101 @@
+#Mirabel_Luan_luanmira_1010851632
+#Javid_Wu_wuhungja_1011314267
+
+reset;
+
+model RelaxedLP.mod;
+data warp.dat;
+
+option solver gurobi;
+
+solve;
+
+printf "PROFIT\n%f\n\n", Profit > RelaxedLP.out;
+
+printf "X_VALUES\n" >> RelaxedLP.out;
+for {p in P}
+    printf "%s %f\n", p, x[p] >> RelaxedLP.out;
+printf "\n" >> RelaxedLP.out;
+############ PRINTING Y (u) VALUES #####################
+printf "U_VALUES\n" >> RelaxedLP.out;
+for {w in W}
+    printf "%s %f\n", w, y[w] >> RelaxedLP.out;
+printf "\n" >> RelaxedLP.out;
+
+printf "\n\nCONSTRAINT VIOLATIONS \n\n" > RelaxedLP.out;
+
+for {m in M}{
+	if Machine_Capacity[m].slack < 0 then
+		printf "Machine Capacity Constraint [%s] is v. \n", m > RelaxedLP.out;
+}
+
+if RM_Budget.slack < 0 then
+	printf "Raw Material Budget Constraint is violated." > RelaxedLP.out;
+
+for {r in R}{
+	if RM_Availability[r].slack < 0 then
+		printf "Raw Material Availability Constraint [%s] is violated. \n", r > RelaxedLP.out;
+}
+if Warehouse_Cap.slack < 0 then
+	printf "Warehouse Capacity Constraint violated" > RelaxedLP.out;
+	
+#################
+
+printf "\n\nCONSTRAINT BINDING\n\n" > RelaxedLP.out;
+
+for {i in M}{
+	if Machine_Capacity[i].slack == 0 then
+		printf "Machine Capacity Constraint [%s] is binding. \n", i > RelaxedLP.out;
+}
+
+if RM_Budget.slack == 0 then
+	printf "Raw Material Budget Constraint is binding." > RelaxedLP.out;
+
+for {j in R}{
+	if RM_Availability[j].slack == 0 then
+		printf "Raw Material Availability Constraint [%s] is binding. \n", j > RelaxedLP.out;
+}
+if Warehouse_Cap.slack == 0 then
+	printf "Warehouse Capacity Constraint is binding" > RelaxedLP.out;
+
+print "Warehouse capacity slack:" > RelaxedLP.out;
+display Warehouse_Cap.slack > RelaxedLP.out;
+
+print "Raw Material Budget slack:" > RelaxedLP.out;
+display RM_Budget.slack > RelaxedLP.out;
+
+#########################################
+
+printf "RAW_MATERIAL_TABLE\n" >> RelaxedLP.out;
+printf "RM  Consumed  Available  Slack  Dual\n" >> RelaxedLP.out;
+for {r in R}
+    printf "%s %f %f %f %f\n",
+        r,
+        sum{p in P} bom[p,r] * x[p],
+        rm_avail[r],
+        RM_Availability[r].slack,
+        RM_Availability[r].dual
+        >> RelaxedLP.out;
+printf "\n" >> RelaxedLP.out;
+
+printf "MACHINE_CONSTRAINTS\n" >> RelaxedLP.out;
+printf "Machine  Slack  Dual\n" >> RelaxedLP.out;
+for {m in M}
+    printf "%s %f %f\n",
+        m,
+        Machine_Capacity[m].slack,
+        Machine_Capacity[m].dual
+        >> RelaxedLP.out;
+printf "\n" >> RelaxedLP.out;
+
+printf "RM_BUDGET\n" >> RelaxedLP.out;
+printf "%f %f\n\n",
+    RM_Budget.slack,
+    RM_Budget.dual
+    >> RelaxedLP.out;
+
+printf "WAREHOUSE_CAP\n" >> RelaxedLP.out;
+printf "%f %f\n",
+    Warehouse_Cap.slack,
+    Warehouse_Cap.dual
+    >> RelaxedLP.out;

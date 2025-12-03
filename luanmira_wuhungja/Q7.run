@@ -1,0 +1,102 @@
+#Mirabel_Luan_luanmira_1010851632
+#Javid_Wu_wuhungja_1011314267
+
+reset;
+
+model Q7.mod;
+data warp.dat;
+
+option solver gurobi;
+
+solve;
+
+printf "PROFIT\n%f\n\n", Profit > Q7.out;
+
+printf "X_VALUES\n" >> Q7.out;
+for {p in P}
+    printf "%s %f\n", p, x[p] >> Q7.out;
+printf "\n" >> Q7.out;
+
+############ PRINTING Y (u) VALUES #####################
+printf "U_VALUES\n" >> Q7.out;
+for {w in W}
+    printf "%s %f\n", w, y[w] >> Q7.out;
+printf "\n" >> Q7.out;
+
+printf "\n\nCONSTRAINT VIOLATIONS \n\n" > Q7.out;
+
+for {m in M}{
+	if Machine_Capacity[m].slack < 0 then
+		printf "Machine Capacity Constraint [%s] is v. \n", m > Q7.out;
+}
+
+if RM_Budget.slack < 0 then
+	printf "Raw Material Budget Constraint is violated." > Q7.out;
+
+for {r in R}{
+	if RM_Availability[r].slack < 0 then
+		printf "Raw Material Availability Constraint [%s] is violated. \n", r > Q7.out;
+}
+if Warehouse_Cap.slack < 0 then
+	printf "Warehouse Capacity Constraint violated" > Q7.out;
+	
+#################
+
+printf "\n\nCONSTRAINT BINDING\n\n" > Q7.out;
+
+for {i in M}{
+	if Machine_Capacity[i].slack == 0 then
+		printf "Machine Capacity Constraint [%s] is binding. \n", i > Q7.out;
+}
+
+if RM_Budget.slack == 0 then
+	printf "Raw Material Budget Constraint is binding." > Q7.out;
+
+for {j in R}{
+	if RM_Availability[j].slack == 0 then
+		printf "Raw Material Availability Constraint [%s] is binding. \n", j > Q7.out;
+}
+if Warehouse_Cap.slack == 0 then
+	printf "Warehouse Capacity Constraint is binding" > Q7.out;
+
+print "Warehouse capacity slack:" > Q7.out;
+display Warehouse_Cap.slack > Q7.out;
+
+print "Raw Material Budget slack:" > Q7.out;
+display RM_Budget.slack > Q7.out;
+
+#########################################
+
+printf "RAW_MATERIAL_TABLE\n" >> Q7.out;
+printf "RM  Consumed  Available  Slack  Dual\n" >> Q7.out;
+for {r in R}
+    printf "%s %f %f %f %f\n",
+        r,
+        sum{p in P} bom[p,r] * x[p],
+        rm_avail[r],
+        RM_Availability[r].slack,
+        RM_Availability[r].dual
+        >> Q7.out;
+printf "\n" >> Q7.out;
+
+printf "MACHINE_CONSTRAINTS\n" >> Q7.out;
+printf "Machine  Slack  Dual\n" >> Q7.out;
+for {m in M}
+    printf "%s %f %f\n",
+        m,
+        Machine_Capacity[m].slack,
+        Machine_Capacity[m].dual
+        >> Q7.out;
+printf "\n" >> Q7.out;
+
+printf "RM_BUDGET\n" >> Q7.out;
+printf "%f %f\n\n",
+    RM_Budget.slack,
+    RM_Budget.dual
+    >> Q7.out;
+
+printf "WAREHOUSE_CAP\n" >> Q7.out;
+printf "%f %f\n",
+    Warehouse_Cap.slack,
+    Warehouse_Cap.dual
+    >> Q7.out;

@@ -1,0 +1,90 @@
+#Mirabel_Luan_luanmira_1010851632
+#Javid_Wu_wuhungja_1011314267
+
+reset;
+model RoundedIP.mod;
+data warp.dat;
+option solver gurobi;
+solve;
+
+param x_round{p in P};
+let {p in P} x_round[p] := round(x[p]);
+printf "PROFIT\n%f\n\n", Profit > RoundedIP.out;
+
+############ ROUNDING X VALUES #####################
+
+printf "X_VALUES\n" >> RoundedIP.out;
+for {p in P}
+    printf "%s %f\n", p, x_round[p] >> RoundedIP.out;
+printf "\n" >> RoundedIP.out;
+
+############ PRINTING Y (u) VALUES #####################
+printf "U_VALUES\n" >> RoundedIP.out;
+for {w in W}
+    printf "%s %f\n", w, y[w] >> RoundedIP.out;
+printf "\n" >> RoundedIP.out;
+
+######### VIOLATED CONSTRAINTS #####################
+
+printf "RAW_MATERIAL CONSTRAINTS VIOLATED\n" >> RoundedIP.out;
+for {r in R}
+	if rm_avail[r] - sum{p in P} bom[p,r] * x_round[p]<0 then printf "Raw Material Availability Constraint [%s] is violated. \n", r >> RoundedIP.out;
+	
+printf "MACHINE_CONSTRAINTS VIOLATED\n" >> RoundedIP.out;
+for {m in M}
+	if (machine_capacity_min[m] - sum{p in P} proc_time[p,m] * x_round[p])<0 then printf "Machine Capacity Constraint [%s] is violated. \n", m >> RoundedIP.out;
+printf "RM_BUDGET\n" >> RoundedIP.out;
+
+################## BINDING CONSTRAINTS ###################
+
+if (rm_budget - sum{p in P, r in R} rm_cost[r] * bom[p,r] * x_round[p]) == 0 then printf "RM budget binding" >> RoundedIP.out;
+printf "WAREHOUSE_CAP\n" >> RoundedIP.out;	
+if (sum{w in W} warehouse_cap[w] * y[w] - sum{p in P} x_round[p]) == 0 then printf "Warehouse cap binding" >> RoundedIP.out;
+
+
+printf "RAW_MATERIAL CONSTRAINTS BINDING\n" >> RoundedIP.out;
+for {r in R}
+	if rm_avail[r] - sum{p in P} bom[p,r] * x_round[p]==0 then printf "Raw Material Availability Constraint [%s] is binding. \n", r >> RoundedIP.out;
+	
+printf "MACHINE_CONSTRAINTS BINDING" >> RoundedIP.out;
+for {m in M}
+	if (machine_capacity_min[m] - sum{p in P} proc_time[p,m] * x_round[p])==0 then printf "Machine Capacity Constraint [%s] is binding. \n", m >> RoundedIP.out;
+
+print "Warehouse capacity slack:" > RoundedIP.out;
+display Warehouse_Cap.slack > RoundedIP.out;
+
+print "Raw Material Budget slack:" > RoundedIP.out;
+display RM_Budget.slack > RoundedIP.out;
+
+############# PRINTING CONSTRAINTS ################
+
+printf "RAW_MATERIAL_TABLE\n" >> RoundedIP.out;
+printf "RM  Consumed  Available  Slack  Dual\n" >> RoundedIP.out;
+for {r in R}
+    printf "%s %f %f %f %f\n",
+        r,
+        sum{p in P} bom[p,r] * x_round[p],
+        rm_avail[r],
+        rm_avail[r] - sum{p in P} bom[p,r] * x_round[p],
+        RM_Availability[r].dual
+        >> RoundedIP.out;
+printf "\n" >> RoundedIP.out;
+printf "MACHINE_CONSTRAINTS\n" >> RoundedIP.out;
+printf "Machine  Slack  Dual\n" >> RoundedIP.out;
+for {m in M}
+    printf "%s %f %f\n",
+        m,
+        machine_capacity_min[m] - sum{p in P} proc_time[p,m] * x_round[p],
+        Machine_Capacity[m].dual
+        >> RoundedIP.out;
+printf "\n" >> RoundedIP.out;
+printf "RM_BUDGET\n" >> RoundedIP.out;
+printf "%f %f\n\n",
+    rm_budget - sum{p in P, r in R} rm_cost[r] * bom[p,r] * x_round[p],
+    RM_Budget.dual
+    >> RoundedIP.out;
+printf "WAREHOUSE_CAP\n" >> RoundedIP.out;
+printf "%f %f\n",
+    sum{w in W} warehouse_cap[w] * y[w] - sum{p in P} x_round[p],
+    Warehouse_Cap.dual
+    >> RoundedIP.out;
